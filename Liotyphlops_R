@@ -209,3 +209,159 @@ writeRaster(
 )
 
 
+
+##Script for PCA##
+
+library(tidyverse)
+library(ggpubr)
+library(rstatix)
+library(dplyr)
+library(ggplot2)
+library(psych)
+library(caret)
+library(devtools)
+library (ggbiplot)
+library(ggfortify)
+library(reshape2)
+
+##Import data##
+
+setwd("~/R_Files")
+mydata <- read.csv("Males.csv", header = TRUE)
+df <- data.frame(mydata)
+str(df)
+
+#This should be applied for all rows, except the "SPECIES" row#
+
+x_num <- as.numeric(x)
+
+[Should read as]
+
+df$cont_SVL= as.numeric(df$cont_SVL)
+df$cont_TTL= as.numeric(df$cont_TTL)
+df$cont_TL= as.numeric(df$cont_TL)
+df$cont_HL= as.numeric(df$cont_HL)
+df$disc_DO1= as.numeric(df$disc_DO1)
+df$disc_DO3= as.numeric(df$disc_DO3)
+df$disc_POSTF= as.numeric(df$disc_POSTF)
+df$disc_CNAS= as.numeric(df$disc_CNAS)
+df$disc_Sup= as.numeric(df$disc_Sup)
+df$disc_Inf= as.numeric(df$disc_Inf)
+df$disc_Dorsals= as.numeric(df$disc_Dorsals)
+df$disc_Ven= as.numeric(df$disc_Ven)
+df$disc_SubC= as.numeric(df$disc_SubC)
+df$rat_VenwSubC= as.numeric(df$rat_VenwSubC)
+df$cat_CCL= as.numeric(df$cat_CCL)
+
+#Applied to the SPECIES row#
+
+x_fac <- as.factor(x)
+
+[Should read as] 
+
+df$Species = as.factor(df$Species)
+
+
+# Exploratory analyses#
+
+set.seed(111)
+ind <- sample(2, nrow(df),
+              replace = TRUE,
+              prob = c(0.8, 0.2))
+training <- df[ind==1,]
+testing <- df[ind==2,]
+
+pairs.panels(training[,-5],
+             gap = 0,
+             bg = c("red", "yellow", "blue")[training$Species],
+             pch=21)
+			 
+
+
+# Species needs to be back at numeric.#
+
+df$Species = as.numeric(as.factor(df$Species))
+
+##Remove zero variance variables##
+
+nearZeroVar(df)
+
+##Plot PCA, excluding zero variance variables##
+
+df$Species = as.factor(df$Species)
+
+pc <- prcomp(df[-2],
+              center = TRUE,
+              scale. = TRUE)
+			  
+print(pc)
+
+g <- ggbiplot(pc, 
+               obs.scale = 1,
+               var.scale = 1,
+               groups = df$Species,
+              ellipse = TRUE,
+               circle = TRUE,
+               ellipse.prob = 0.68)
+> g <- g + scale_color_discrete(name = '')
+> g <- g + theme(legend.direction = 'horizontal',
+                legend.position = 'top')
+> print(g)
+
+##USING GGPLOT##
+
+df$Species = as.numeric(as.factor(df$Species))
+
+pca_res <- prcomp(df[-2], scale. = TRUE)
+
+autoplot(pca_res)
+
+df$Species = as.factor(df$Species)
+
+##CREATE A NEW DATAFRAME#
+
+PCi<-data.frame(pca_res$x,Species=df$Species)
+
+##AUTOPLOT OPT 1##
+
+
+autoplot(pca_res, data = df, colour = 'Species', frame = true, size = 4, scale_color_manual(values = c("#FF1BB3","#A7FF5B","#99554D")))
+
+export = 4.5 X 4.5 
+
+
+##AUTOPLOT OPT 2###
+
+ggplot(PCi,aes(x=PC1,y=PC2,colour=Species,pch=17))+
+    scale_shape_identity()+
+    stat_ellipse(geom = "polygon",
+                 fill = 4, alpha = 0.01)+
+    geom_point(shape=17,size=4)+
+    scale_color_manual(values = c("#FAA613","#F44708","#550527","#FF36AB","#A10702","#688E26"))
+	
+export = 3.5 x 3.5 
+
+
+##MULTIPLE BOXPLOTS##
+
+
+df.m <- melt(df, id.var = "Species")
+
+p <- ggplot(data = df.m, aes(x=variable, y=value)) + 
+    geom_boxplot(aes(fill=Species))+
+geom_point(aes(shape = Species), size = 2, position = position_jitterdodge(0.5), alpha=0.8)
+p + facet_wrap( ~ variable, scales="free")
+
+export = 15 x 10
+
+
+####
+
+PALETTE
+SP01 [SOUSAI] = "#550527"
+SP02 [BEUI] = "#FAA613"
+SP03 [TERNETZII] = "#F44708"
+SP04 [CAISSARA] = "#FF36AB"
+SP05 [WILDERI] = "#A10702"
+SP06 [TREFAUTI] = "#688E26"
+
