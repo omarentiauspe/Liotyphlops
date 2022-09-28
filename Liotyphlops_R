@@ -1,0 +1,211 @@
+Supplemental Material R-Code for manuscript: "More than meets no eyes: Taxonomic revision of two 
+Liotyphlops Peters, 1881 (Serpentes: Anomalepididae) blindsnakes from the Atlantic Rainforest"
+
+Omar Entiauspe-Neto et al. 2022
+
+###Sexual dimorphism plots###
+
+library(tidyverse)
+library(palmerpenguins)
+library(datasauRus)
+library(gridExtra
+library(tidyverse)
+library(ggpubr)
+library(rstatix)
+library(dplyr)
+library(ggplot2)
+library(psych)
+library(caret)
+library(devtools)
+library (ggbiplot)
+library(ggfortify)
+library(reshape2)
+library(GGally)
+
+
+setwd("~/R_Files")
+
+#or setwd("~/Rdir")# 
+
+mydata <- read.csv("Liob.csv", header = TRUE)
+df <- data.frame(mydata)
+str(df)
+
+
+df %>%
+ dplyr::select(cont_TTL, cont_TL, disc_Dorsals, disc_Ven, disc_SubC) %>%
+ GGally::ggpairs(aes(color = df$Sex)) +
+ scale_colour_manual(values = c("darkorange", "cyan4")) +
+ scale_fill_manual(values = c("darkorange", "cyan4")) +
+ theme_bw()
+ 
+ 
+ #OR#
+ 
+ df %>%
+ dplyr::select(Sex, Total_length, Tail_length, Mid_dorsals, Ventrals, Subcaudals) %>%
+ GGally::ggpairs(aes(color = Sex)) +
+ scale_colour_manual(values = c("darkorange", "purple")) +
+ scale_fill_manual(values = c("darkorange", "purple")) +
+ theme_bw()
+ 
+ #### Genetic distances ####
+ 
+ 
+library(ggplot2)
+library(reshape)
+
+coxxer <- read.delim("DSS.tsv", header=TRUE)
+
+melted_cormat <- melt(coxxer)
+
+melted_cormat$X <- as.character(melted_cormat$X)
+
+melted_cormat$X <- factor(melted_cormat$X, levels=unique(melted_cormat$X))
+
+head(melted_cormat)
+
+ggplot(data = melted_cormat, aes(x=X, y=variable, fill = value)) +
+  geom_tile(color = "black") +
+  geom_text(aes(label = value), color = "white", size = 3) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, 
+                                   size = 10, hjust = 1)) +
+  theme(axis.text.y = element_text(size = 10, hjust = 1)) +
+  scale_fill_gradient2(mid = "#080708", high = "#546063")
+coord_fixed()
+
+### ANOVA ###
+
+
+##Hi, there! Happy to see you're interested in our supplementary material##
+
+library(tidyverse)
+library(ggpubr)
+library(rstatix)
+
+##Import data##
+
+setwd("~/R_Files")
+mydata <- read.csv("ASC.csv")
+df <- data.frame(mydata)
+
+##PLOT variables to evaluate for outliers##
+
+ggboxplot(df, x = "Species", y = "SC")
+
+df %>% 
+  group_by(Species) %>%
+  identify_outliers(SC)
+  
+  
+
+##Build the linear model##
+model  <- lm(TL ~ Species, data = df)
+
+##Create a QQ plot of residuals##
+ggqqplot(residuals(model))
+shapiro_test(residuals(model))
+
+##Check Normality##
+
+df %>%
+  group_by(Species) %>%
+  shapiro_test(TL)
+
+##Check homogeneity##
+
+df %>% levene_test(TL ~ Species)
+
+##Run ANOVA##
+
+res.aov <- df %>% anova_test(SC ~ Species)
+res.aov
+
+##Run WILCOXON##
+
+res <- wilcox.test(Sex, TL)
+res
+
+#### SDM ###
+
+
+Liotyphlops <- read.csv("Wil.csv", header = TRUE)
+
+Liotyphlops$lon <- Liotyphlops$lon
+Liotyphlops$lat <- Liotyphlops$lat
+
+##Clean##
+
+capgeo <- Liotyphlops %>%
+  select(Species, lat, lon) %>% 
+  filter(complete.cases(.)) %>%  
+  
+  distinct() 
+
+#mapa#
+
+map(
+  'worldHires',
+  xlim = c(min(capgeo$lon) - 5.0, max(capgeo$lon) + 5.0),
+  ylim = c(min(capgeo$lat) - 5.0, max(capgeo$lat) + 5.0),
+  fill = T,
+  col = "light grey"
+)
+
+box()
+
+points(capgeo$lon,
+       capgeo$lat,
+       col = "orange",
+       pch = 20,
+       cex = 0.7)
+
+capc <- capgeo %>% 
+  dplyr::select(Species, lat, lon)
+
+write.csv(capc, "Liotyphlops_locs.csv", row.names = FALSE)
+
+
+capg <- read.csv("Liotyphlops_locs.csv")
+
+buff <- 5   
+
+xmin <- min(capg$lon) - 10.0
+xmax <- max(capg$lon) + 10.0
+ymin <- min(capg$lat) - 10.0
+ymax <- max(capg$lat) + 10.0
+
+e <- extent(xmin, xmax, ymin, ymax)
+
+envcrop <- crop(env, e)
+
+plot(envcrop[[1]], main = "Annual Mean Temperature")
+map(
+  'worldHires',
+  xlim = c(xmin, xmax),
+  ylim = c(ymin, ymax),
+  fill = F,
+  add = T
+)
+
+points(capg$lon, capg$lat, pch = "+")
+
+
+ten_div <-
+  c(1, 2, 5, 6, 7, 8, 9, 10, 11)  
+
+for (layer in ten_div) {
+  envcrop[[layer]] <- envcrop[[layer]] / 10
+}
+
+layers <- c(1, 4, 11, 12, 14, 19)
+
+writeRaster(
+  stack(envcrop[[layers]]),
+  paste0("bio", layers), 
+  bylayer = TRUE,
+  format = 'ascii',
+  overwrite = T
+)
+
+
